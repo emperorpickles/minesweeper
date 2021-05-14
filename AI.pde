@@ -2,13 +2,11 @@ class AI {
 	int pixelX;
 	int pixelY;
 	boolean flag;
-	int[] corners = {0, 0, tilesX-1, tilesY-1};
 	ArrayList<PVector> targets = new ArrayList<PVector>();
 	ArrayList<PVector> nearbyHidden = new ArrayList<PVector>();
 
 	boolean hasTarget = false;
 	boolean firstMove = true;
-	int cursorSpeed = 200;
 
 	PVector pos = new PVector(width/2, height/2);
 
@@ -17,6 +15,15 @@ class AI {
 	void reset() {
 		firstMove = true;
 		targets.clear();
+		for (int x = 0; x < tilesX; x++) {
+			for (int y = 0; y < tilesY; y++) {
+				Tile tile = tiles[x][y];
+				tile.stateAI = "null";
+				tile.flag = false;
+				tile.remove = false;
+				tile.unknown = false;
+			}
+		}
 	}
 
 	//-----------------------------------------------
@@ -29,13 +36,22 @@ class AI {
 		}
 
 		// get list of targets
-		if (targets.size() == 0) {
-			// randomTarget();
+		if (enableCursor && targets.size() == 0) {
+			smartTarget();
+			if (debug) {
+				println("\n-----TARGETS------");
+				for (int i = 0; i < targets.size(); i++) {
+					println(String.format("xy: (%d,%d), flag: %d", 
+										(int)(targets.get(i).x)+1, (int)(targets.get(i).y)+1, (int)(targets.get(i).z)));
+				}
+			}
+		}
+		else if (!enableCursor) {
 			smartTarget();
 		}
 
 		// assign current target
-		if (targets.size() > 0 && !hasTarget) {
+		if (enableCursor && targets.size() > 0 && !hasTarget) {
 			int x = (int)(targets.get(0).x);
 			int y = (int)(targets.get(0).y);
 			pixelX = x*tileSize+tileSize/2;
@@ -46,16 +62,11 @@ class AI {
 			} else {
 				flag = false;
 			}
-			println("\nTARGETS");
-			for (int i = 0; i < targets.size(); i++) {
-				println(String.format("xy: (%d,%d), flag: %d", 
-									(int)(targets.get(i).x)+1, (int)(targets.get(i).y)+1, (int)(targets.get(i).z)));
-			}
 			hasTarget = true;
 		}
 
-		// draw and move cursor, clicking target once arrived
-		if (hasTarget) {
+		if (enableCursor && hasTarget) {
+			// draw and move cursor, clicking target once arrived
 			if (dist(pos.x, pos.y, pixelX, pixelY) > 2) {
 				PVector vel = new PVector((pixelX) - pos.x, (pixelY) - pos.y);
 				vel.limit(cursorSpeed);
@@ -64,9 +75,9 @@ class AI {
 				click((int)(targets.get(0).x), (int)(targets.get(0).y), flag);
 				targets.remove(0);
 			}
+			fill(255);
+			circle(pos.x, pos.y, 20);
 		}
-		fill(255);
-		circle(pos.x, pos.y, 20);
 	}
 
 	//-----------------------------------------------
@@ -88,19 +99,26 @@ class AI {
 
 	void randomTarget() {
 		// first try all corners
-		for (int i = 0; i < 4; i++) {
-			int x = min(corners[(int)random(0,3)], tilesX-1);
-			int y = min(corners[(int)random(0,3)], tilesY-1);
+		int[][] corners = {{0,0}, {tilesX-1,0}, {tilesX-1,tilesY-1}, {0,tilesY-1}};
+		for (int[] corner : corners) {
+			int x = corner[0];
+			int y = corner[1];
 			if (!tiles[x][y].changed) {
 				targets.add(new PVector(x, y, 0));
+				if (!enableCursor) click(x, y, false);
+				if (debug) println(String.format("xy: (%d,%d)", x+1, y+1));
 				return;
 			}
 		}
 		// last resort random choice
-		int x = (int)random(tilesX);
-		int y = (int)random(tilesY);
-		if (!tiles[x][y].changed) {
-			targets.add(new PVector(x, y, 0));
+		while (targets.size() == 0) {
+			int x = (int)random(tilesX);
+			int y = (int)random(tilesY);
+			if (!tiles[x][y].changed) {
+				targets.add(new PVector(x, y, 0));
+				if (!enableCursor) click(x, y, false);
+				if (debug) println(String.format("xy: (%d,%d)", x+1, y+1));
+			}
 		}
 	}
 
@@ -111,7 +129,8 @@ class AI {
 		if (firstMove) {
 			randomTarget();
 		} else {
-			println("\nlooking for targets");
+			if (debug) println("\n-----FINDING TARGETS-----");
+			targets.clear();
 			for (int x = 0; x < tilesX; x++) {
 				for (int y = 0; y < tilesY; y++) {
 					Tile tile = tiles[x][y];
@@ -123,7 +142,7 @@ class AI {
 			}
 			// if nothing else, choose a random target
 			if (targets.size() == 0) {
-				println("targeting random");
+				if (debug) println("\n-----RANDOM TARGET-----");
 				randomTarget();
 			}
 		}
@@ -139,7 +158,6 @@ class AI {
 			int cx = x + direction[0];
 			int cy = y + direction[1];
 			if (validTile(cx,cy) && !tiles[cx][cy].cleared) {
-				// tiles[cx][cy].searching = true;
 				nearbyHidden.add(new PVector(cx, cy, 1));
 			}
 		}
@@ -154,10 +172,14 @@ class AI {
 
 				// all hidden tiles must be bombs
 				if (nearbyHidden.size() == tile.bombsNearby && target.stateAI == "null") {
-					targets.add(new PVector(cx, cy, 1));
 					target.stateAI = "flag";
 					target.flag = true;
-					println("---TARGET ADDED---");
+					targets.add(new PVector(cx, cy, 1));
+					if (!enableCursor) click(cx, cy, true);
+					if (debug) {
+						println("-----target added-----");
+						println(String.format("xy: (%d,%d)", cx+1, cy+1));
+					}
 					return;
 				}
 
@@ -169,14 +191,16 @@ class AI {
 					}
 				}
 				if (tile.bombsNearby == flags && target.stateAI == "null") {
-					targets.add(new PVector(cx, cy, 0));
 					target.stateAI = "remove";
 					target.remove = true;
-					println("---TARGET ADDED---");
+					targets.add(new PVector(cx, cy, 0));
+					if (!enableCursor) click(cx, cy, false);
+					if (debug) {
+						println("-----target added-----");
+						println(String.format("xy: (%d,%d)", cx+1, cy+1));
+					}
 					return;
 				}
-				println(String.format("TILE(xy: (%d,%d), flags: %d) ---- TARGET(xy: (%d,%d))",
-															x+1, y+1, flags, cx+1, cy+1));
 			}
 		}
 	}

@@ -1,9 +1,24 @@
+// board settings
 int tilesX = 80;
-int tilesY = 50;
-int numBombs = 600;
-
+int tilesY = 48;
+int numBombs = 400;
 int tileSize = 20;
+int gameSpeed = 60;
 
+// AI settings
+AI ai;
+boolean enableAI = false;
+boolean enableCursor = false;
+int cursorSpeed = 100;
+boolean debug = true;
+
+// gamestate
+boolean gameover = false;
+boolean lost = false;
+boolean won = false;
+boolean reset = false;
+
+// set variables
 int width = tilesX*tileSize;
 int height = tilesY*tileSize;
 int winWidth = max(300, width+1);
@@ -13,22 +28,20 @@ int aiButtonX = winWidth/2-50;
 int aiButtonY = winHeight-24;
 int aiButtonWidth = 100;
 int aiButtonHeight = 21;
+int[] aiButton = {aiButtonX, aiButtonY, aiButtonWidth, aiButtonHeight};
+
+int cButtonX = winWidth/2+55;
+int cButtonY = winHeight-24;
+int cButtonWidth = 80;
+int cButtonHeight = 21;
+int[] cButton = {cButtonX, cButtonY, cButtonWidth, cButtonHeight};
+
+PFont tileFont;
+PFont titleFont;
 
 int[][] directions = {{-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}, {1,-1}, {0,-1}};
 Tile[][] tiles = new Tile[tilesX][tilesY];
-
-AI ai;
-boolean enableAI = false;
-boolean debug = true;
-
 int bombsLeft = numBombs;
-
-boolean gameover = false;
-boolean lost = false;
-boolean won = false;
-boolean reset = false;
-PFont tileFont;
-PFont titleFont;
 
 //-----------------------------------------------
 
@@ -37,7 +50,7 @@ void settings() {
 }
 
 void setup() {
-	frameRate(60);
+	frameRate(gameSpeed);
 	tileFont = loadFont("AgencyFB-Bold-15.vlw");
 	titleFont = createFont("Gargi", winWidth/6);
 
@@ -54,7 +67,6 @@ void draw() {
 	for (int i = 0; i < tilesX; i++) {
 		for (int j = 0; j < tilesY; j++) {
 			tiles[i][j].show();
-			tiles[i][j].checking = false;
 		}
 	}
 
@@ -123,6 +135,13 @@ void toolbar() {
 		fill(200);
 		rect(aiButtonX, aiButtonY, aiButtonWidth, aiButtonHeight);
 	}
+	if (enableCursor) {
+		fill(230, 30, 75);
+		rect(cButtonX, cButtonY, cButtonWidth, cButtonHeight);	
+	} else {
+		fill(200);
+		rect(cButtonX, cButtonY, cButtonWidth, cButtonHeight);
+	}
 
 	fill(20);
 	textFont(tileFont, 15);
@@ -130,14 +149,20 @@ void toolbar() {
 	text("Bombs Left: " + bombsLeft, winWidth/6, winHeight-12);
 	text("Press \"r\" to restart", winWidth-winWidth/6, winHeight-12);
 	text("AI MODE", winWidth/2, winHeight-12);
+	text("CURSOR", cButtonX+cButtonWidth/2, winHeight-12);
 }
 
 //-----------------------------------------------
 
 void mousePressed() {
-	if (mouseX >= aiButtonX && mouseX <= aiButtonX+aiButtonWidth &&
-			mouseY >= aiButtonY && mouseY <= aiButtonY+aiButtonHeight) {
+	if (buttonClick(aiButton)) {
 		enableAI = !enableAI;
+		return;
+	}
+	else if (buttonClick(cButton)) {
+		println("\nMODE CHANGE");
+		enableCursor = !enableCursor;
+		ai.reset();
 		return;
 	}
 	// make sure mouse is inside board
@@ -155,6 +180,17 @@ void mousePressed() {
 	if (mouseButton == RIGHT) {
 		tileFlagged(mousePosX, mousePosY);
 	}
+}
+
+boolean buttonClick(int[] coords) {
+	int x = coords[0];
+	int y = coords[1];
+	int width = coords[2];
+	int height = coords[3];
+	if (mouseX >= x && mouseX <= x+width &&
+			mouseY >= y && mouseY <= y+height) {
+		return true;
+	} else return false;
 }
 
 void keyPressed() {
@@ -248,8 +284,8 @@ void debugOverlay() {
 		return;
 	}
 	else if (overlay == true) {
-		int mousePosX = min(floor(mouseX / tileSize), 16);
-		int mousePosY = min(floor(mouseY / tileSize), 16);
+		int mousePosX = floor(mouseX / tileSize);
+		int mousePosY = floor(mouseY / tileSize);
 		Tile tile = tiles[mousePosX][mousePosY];
 
 		fill(200);
