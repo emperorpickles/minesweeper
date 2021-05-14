@@ -1,18 +1,24 @@
 class Tile {
 	String state = "safe";
 	PVector pos;
+	int bombsNearby = 0;
 	boolean flagged = false;
 	boolean cleared = false;
 	boolean changed = false;
-	int bombsNearby = 0;
+
+	String stateAI = "null";
+	boolean flag = false;
+	boolean remove = false;
+	boolean checking = false;
+	boolean unknown = false;
 
 	Tile(float x, float y) {
 		pos = new PVector(x, y);
 	}
 
 	void show() {
-		if (gameover) {
-			// If game lost show all bombs
+		if (won) {
+			// on win show all tiles
 			cleared = true;
 		}
 
@@ -22,6 +28,7 @@ class Tile {
 		rect(pos.x, pos.y, tileSize, tileSize);
 
 		if (cleared) {
+			unknown = false;
 			switch (state) {
 				case "safe":
 					if (bombsNearby > 0) {
@@ -44,6 +51,7 @@ class Tile {
 			}
 		}
 		if (flagged) {
+			unknown = false;
 			fill(60, 80, 180);
 			rect(pos.x, pos.y, tileSize, tileSize);
 
@@ -57,6 +65,18 @@ class Tile {
 				line(pos.x, pos.y, pos.x+tileSize, pos.y+tileSize);
 				line(pos.x, pos.y+tileSize, pos.x+tileSize, pos.y);
 			}
+		}
+		if (flag) {
+			fill(10, 50, 230, 60);
+			rect(pos.x, pos.y, tileSize, tileSize);
+		}
+		else if (remove) {
+			fill(230, 30, 75, 40);
+			rect(pos.x, pos.y, tileSize, tileSize);
+		}
+		else if (unknown) {
+			fill(10, 230, 100, 40);
+			rect(pos.x, pos.y, tileSize, tileSize);
 		}
 	}
 }
