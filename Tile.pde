@@ -66,6 +66,7 @@ class Tile {
 				line(pos.x, pos.y+tileSize, pos.x+tileSize, pos.y);
 			}
 		}
+		// AI targeting debug rendering
 		if (flag) {
 			fill(10, 50, 230, 60);
 			rect(pos.x, pos.y, tileSize, tileSize);

@@ -1,15 +1,15 @@
 // board settings
 int tilesX = 80;
-int tilesY = 48;
-int numBombs = 400;
+int tilesY = 50;
+int numBombs = 600;
 int tileSize = 20;
-int gameSpeed = 60;
+int gameSpeed = 30;
 
 // AI settings
 AI ai;
 boolean enableAI = false;
 boolean enableCursor = false;
-int cursorSpeed = 100;
+int cursorSpeed = 10;
 boolean debug = true;
 
 // gamestate
@@ -43,6 +43,9 @@ int[][] directions = {{-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}, {1,-1}, {0,-
 Tile[][] tiles = new Tile[tilesX][tilesY];
 int bombsLeft = numBombs;
 
+int timeStart;
+int timeEnd;
+
 //-----------------------------------------------
 
 void settings() {
@@ -60,6 +63,10 @@ void setup() {
 
 //-----------------------------------------------
 
+void aiMove() {
+	ai.move();
+}
+
 void draw() {
 	background(120);
 	toolbar();
@@ -71,20 +78,27 @@ void draw() {
 	}
 
 	if (!gameover && enableAI) {
-		ai.move();
+		thread("aiMove");
+		if (enableCursor) {
+			Float pos = ai.cursorPos();
+			fill(255);
+			circle(pos.x, pos.y, 20);
+		}
 	}
 
-	if (lost) {
-		fill(20);
-		textFont(titleFont);
-		textAlign(CENTER, CENTER);
-		text("Gameover!", winWidth/2+8, winHeight/2-26);
-	}
-	if (won) {
-		fill(20);
-		textFont(titleFont);
-		textAlign(CENTER, CENTER);
-		text("Winner!", winWidth/2+8, winHeight/2-26);
+	if (gameover) {
+		if (lost) {
+			fill(20);
+			textFont(titleFont);
+			textAlign(CENTER, CENTER);
+			text("Gameover!", winWidth/2+8, winHeight/2-26);
+		}
+		if (won) {
+			fill(20);
+			textFont(titleFont);
+			textAlign(CENTER, CENTER);
+			text("Winner!", winWidth/2+8, winHeight/2-26);
+		}
 	}
 
 	if (debug) {
@@ -123,6 +137,7 @@ void createBoard() {
 		}
 	}
 	bombsLeft = numBombs;
+	timeStart = millis();
 }
 
 //-----------------------------------------------
@@ -229,8 +244,11 @@ void tileFlagged(int i, int j) {
 				}
 			}
 			if (correctFlags == numBombs) {
+				timeEnd = millis();
+				println("time: "+(timeEnd-timeStart));
 				gameover = true;
 				won = true;
+				println("VICTORY");
 			}
 		}
 	}
@@ -249,8 +267,11 @@ void tileClicked(int i, int j) {
 	tile.changed = true;
 	// if tile was a bomb then gameover
 	if (tile.state == "bomb") {
+		timeEnd = millis();
+		println("time: "+(timeEnd-timeStart));
 		gameover = true;
 		lost = true;
+		println("GAMEOVER");
 		return;
 	}
 	// if tile was zero clear all nearby tiles

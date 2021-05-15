@@ -1,3 +1,5 @@
+import java.awt.geom.Point2D.Float;
+
 class AI {
 	int pixelX;
 	int pixelY;
@@ -8,7 +10,8 @@ class AI {
 	boolean hasTarget = false;
 	boolean firstMove = true;
 
-	PVector pos = new PVector(width/2, height/2);
+	Float pos = new Float(width/2, height/2);
+	PVector vel = new PVector();
 
 	//-----------------------------------------------
 
@@ -47,15 +50,15 @@ class AI {
 			}
 		}
 		else if (!enableCursor) {
-			smartTarget();
+			while (!gameover) smartTarget();
 		}
 
 		// assign current target
 		if (enableCursor && targets.size() > 0 && !hasTarget) {
 			int x = (int)(targets.get(0).x);
 			int y = (int)(targets.get(0).y);
-			pixelX = x*tileSize+tileSize/2;
-			pixelY = y*tileSize+tileSize/2;
+			pixelX = (x*tileSize)+(tileSize/2);
+			pixelY = (y*tileSize)+(tileSize/2);
 
 			if (targets.get(0).z == 1) {
 				flag = true;
@@ -63,21 +66,21 @@ class AI {
 				flag = false;
 			}
 			hasTarget = true;
-		}
-
-		if (enableCursor && hasTarget) {
-			// draw and move cursor, clicking target once arrived
-			if (dist(pos.x, pos.y, pixelX, pixelY) > 2) {
-				PVector vel = new PVector((pixelX) - pos.x, (pixelY) - pos.y);
-				vel.limit(cursorSpeed);
-				pos.add(vel);
-			} else {
-				click((int)(targets.get(0).x), (int)(targets.get(0).y), flag);
-				targets.remove(0);
+			while (dist(pos.x, pos.y, pixelX, pixelY) > 10 && enableAI) {
+				cursorPos();
 			}
-			fill(255);
-			circle(pos.x, pos.y, 20);
+			click((int)(targets.get(0).x), (int)(targets.get(0).y), flag);
+			targets.remove(0);
 		}
+	}
+
+	Float cursorPos() {
+		// draw and move cursor, clicking target once arrived
+		vel.set(pixelX-pos.x, pixelY-pos.y);
+		// vel.limit(2*pow(10,-4));
+		vel.set(vel.x/(14*pow(10,4)), vel.y/(14*pow(10,4)));
+		pos.setLocation(pos.x + vel.x, pos.y + vel.y);
+		return pos;
 	}
 
 	//-----------------------------------------------
