@@ -1,11 +1,11 @@
-import java.awt.geom.Point2D.Float;
-
 class AI {
 	int pixelX;
 	int pixelY;
 	boolean flag;
 	ArrayList<PVector> targets = new ArrayList<PVector>();
-	ArrayList<PVector> nearbyHidden = new ArrayList<PVector>();
+	Vector<Point> nearbyHidden = new Vector<Point>();
+	int interval = 500;
+	int lastRecordedTime = 0;
 
 	boolean hasTarget = false;
 	boolean firstMove = true;
@@ -38,47 +38,54 @@ class AI {
 			reset = false;
 		}
 
-		// get list of targets
-		if (enableCursor && targets.size() == 0) {
-			smartTarget();
-			if (debug) {
-				println("\n-----TARGETS------");
-				for (int i = 0; i < targets.size(); i++) {
-					println(String.format("xy: (%d,%d), flag: %d", 
-										(int)(targets.get(i).x)+1, (int)(targets.get(i).y)+1, (int)(targets.get(i).z)));
+		while (enableAI && !gameover) {
+			if (!enableCursor) {
+				smartTarget();
+				// smartTarget();
+			}
+			else if (enableCursor) {
+				// get list of targets
+				if (targets.size() == 0) {
+					smartTarget();
+					if (debug && targets.size() > 0) {
+						println("\n-----TARGETS------");
+						for (int i = 0; i < targets.size(); i++) {
+							println(String.format("xy: (%d,%d), flag: %d", 
+												(int)(targets.get(i).x)+1, (int)(targets.get(i).y)+1, (int)(targets.get(i).z)));
+						}
+					}
+				}
+				// assign current target
+				if (targets.size() > 0 && !hasTarget) {
+					int x = (int)(targets.get(0).x);
+					int y = (int)(targets.get(0).y);
+					pixelX = (x*tileSize)+(tileSize/2);
+					pixelY = (y*tileSize)+(tileSize/2);
+
+					if (targets.get(0).z == 1) {
+						flag = true;
+					} else {
+						flag = false;
+					}
+					hasTarget = true;
+					while (dist(pos.x, pos.y, pixelX, pixelY) > 10 && enableAI) {
+						if (millis()-lastRecordedTime > interval) {
+							cursorPos();
+							lastRecordedTime = millis();
+						}
+					}
+					click((int)(targets.get(0).x), (int)(targets.get(0).y), flag);
+					targets.remove(0);
 				}
 			}
-		}
-		else if (!enableCursor) {
-			while (!gameover) smartTarget();
-		}
-
-		// assign current target
-		if (enableCursor && targets.size() > 0 && !hasTarget) {
-			int x = (int)(targets.get(0).x);
-			int y = (int)(targets.get(0).y);
-			pixelX = (x*tileSize)+(tileSize/2);
-			pixelY = (y*tileSize)+(tileSize/2);
-
-			if (targets.get(0).z == 1) {
-				flag = true;
-			} else {
-				flag = false;
-			}
-			hasTarget = true;
-			while (dist(pos.x, pos.y, pixelX, pixelY) > 10 && enableAI) {
-				cursorPos();
-			}
-			click((int)(targets.get(0).x), (int)(targets.get(0).y), flag);
-			targets.remove(0);
 		}
 	}
 
 	Float cursorPos() {
 		// draw and move cursor, clicking target once arrived
 		vel.set(pixelX-pos.x, pixelY-pos.y);
-		// vel.limit(2*pow(10,-4));
-		vel.set(vel.x/(14*pow(10,4)), vel.y/(14*pow(10,4)));
+		vel.limit(cursorSpeed);
+		// vel.set(vel.x/(14*pow(10,4)), vel.y/(14*pow(10,4)));
 		pos.setLocation(pos.x + vel.x, pos.y + vel.y);
 		return pos;
 	}
@@ -161,7 +168,7 @@ class AI {
 			int cx = x + direction[0];
 			int cy = y + direction[1];
 			if (validTile(cx,cy) && !tiles[cx][cy].cleared) {
-				nearbyHidden.add(new PVector(cx, cy, 1));
+				nearbyHidden.add(new Point(cx, cy));
 			}
 		}
 

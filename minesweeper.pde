@@ -1,9 +1,13 @@
+import java.awt.geom.Point2D.Float;
+import java.awt.Point;
+import java.util.Vector;
+
 // board settings
 int tilesX = 80;
-int tilesY = 50;
+int tilesY = 48;
 int numBombs = 600;
 int tileSize = 20;
-int gameSpeed = 30;
+int gameSpeed = 60;
 
 // AI settings
 AI ai;
@@ -24,17 +28,9 @@ int height = tilesY*tileSize;
 int winWidth = max(300, width+1);
 int winHeight = max(300, height+26);
 
-int aiButtonX = winWidth/2-50;
-int aiButtonY = winHeight-24;
-int aiButtonWidth = 100;
-int aiButtonHeight = 21;
-int[] aiButton = {aiButtonX, aiButtonY, aiButtonWidth, aiButtonHeight};
+int[] aiButton = {winWidth/2-50, winHeight-24, 100, 21};
 
-int cButtonX = winWidth/2+55;
-int cButtonY = winHeight-24;
-int cButtonWidth = 80;
-int cButtonHeight = 21;
-int[] cButton = {cButtonX, cButtonY, cButtonWidth, cButtonHeight};
+int[] cButton = {winWidth/2+55, winHeight-24, 80, 21};
 
 PFont tileFont;
 PFont titleFont;
@@ -78,7 +74,6 @@ void draw() {
 	}
 
 	if (!gameover && enableAI) {
-		thread("aiMove");
 		if (enableCursor) {
 			Float pos = ai.cursorPos();
 			fill(255);
@@ -145,17 +140,17 @@ void createBoard() {
 void toolbar() {
 	if (enableAI) {
 		fill(230, 30, 75);
-		rect(aiButtonX, aiButtonY, aiButtonWidth, aiButtonHeight);	
+		rect(aiButton[0], aiButton[1], aiButton[2], aiButton[3]);	
 	} else {
 		fill(200);
-		rect(aiButtonX, aiButtonY, aiButtonWidth, aiButtonHeight);
+		rect(aiButton[0], aiButton[1], aiButton[2], aiButton[3]);
 	}
 	if (enableCursor) {
 		fill(230, 30, 75);
-		rect(cButtonX, cButtonY, cButtonWidth, cButtonHeight);	
+		rect(cButton[0], cButton[1], cButton[2], cButton[3]);	
 	} else {
 		fill(200);
-		rect(cButtonX, cButtonY, cButtonWidth, cButtonHeight);
+		rect(cButton[0], cButton[1], cButton[2], cButton[3]);
 	}
 
 	fill(20);
@@ -164,7 +159,7 @@ void toolbar() {
 	text("Bombs Left: " + bombsLeft, winWidth/6, winHeight-12);
 	text("Press \"r\" to restart", winWidth-winWidth/6, winHeight-12);
 	text("AI MODE", winWidth/2, winHeight-12);
-	text("CURSOR", cButtonX+cButtonWidth/2, winHeight-12);
+	text("CURSOR", cButton[0]+cButton[2]/2, winHeight-12);
 }
 
 //-----------------------------------------------
@@ -172,6 +167,7 @@ void toolbar() {
 void mousePressed() {
 	if (buttonClick(aiButton)) {
 		enableAI = !enableAI;
+		if (enableAI) thread("aiMove");
 		return;
 	}
 	else if (buttonClick(cButton)) {
@@ -191,7 +187,6 @@ void mousePressed() {
 	if (mouseButton == LEFT) {
 		tileClicked(mousePosX, mousePosY);
 	}
-
 	if (mouseButton == RIGHT) {
 		tileFlagged(mousePosX, mousePosY);
 	}
@@ -217,6 +212,7 @@ void keyPressed() {
 			won = false;
 			lost = false;
 			createBoard();
+			if (enableAI) thread("aiMove");
 	}
 }
 
