@@ -6,6 +6,9 @@ class AI {
 	Vector<Point> nearbyHidden = new Vector<Point>();
 	int interval = 500;
 	int lastRecordedTime = 0;
+	
+	int numGuesses = 0;
+	int numMoves = 0;
 
 	boolean hasTarget = false;
 	boolean firstMove = true;
@@ -17,6 +20,8 @@ class AI {
 
 	void reset() {
 		firstMove = true;
+		numMoves = 0;
+		numGuesses = 0;
 		targets.clear();
 		for (int x = 0; x < tilesX; x++) {
 			for (int y = 0; y < tilesY; y++) {
@@ -36,12 +41,13 @@ class AI {
 			firstMove = true;
 			targets.clear();
 			reset = false;
+			numMoves = 0;
+			numGuesses = 0;
 		}
 
 		while (enableAI && !gameover) {
 			if (!enableCursor) {
 				smartTarget();
-				// smartTarget();
 			}
 			else if (enableCursor) {
 				// get list of targets
@@ -85,15 +91,20 @@ class AI {
 		// draw and move cursor, clicking target once arrived
 		vel.set(pixelX-pos.x, pixelY-pos.y);
 		vel.limit(cursorSpeed);
-		// vel.set(vel.x/(14*pow(10,4)), vel.y/(14*pow(10,4)));
 		pos.setLocation(pos.x + vel.x, pos.y + vel.y);
 		return pos;
+	}
+
+	Float gameMoves() {
+		Float moves = new Float(numMoves, numGuesses);
+		return moves;
 	}
 
 	//-----------------------------------------------
 
 	void click(int x, int y, boolean flag) {
 		Tile tile = tiles[x][y];
+		numMoves++;
 		if (flag) {
 			tileFlagged(x, y);
 			tile.flag = false;
@@ -153,6 +164,7 @@ class AI {
 			// if nothing else, choose a random target
 			if (targets.size() == 0) {
 				if (debug) println("\n-----RANDOM TARGET-----");
+				numGuesses++;
 				randomTarget();
 			}
 		}

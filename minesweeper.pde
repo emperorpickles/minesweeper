@@ -2,11 +2,32 @@ import java.awt.geom.Point2D.Float;
 import java.awt.Point;
 import java.util.Vector;
 
-// board settings
-int tilesX = 80;
-int tilesY = 48;
-int numBombs = 600;
-int tileSize = 20;
+//-----------------------------------------------
+// standard board settings
+//-----------------------------------------------
+// beginner
+// int tilesX = 9;
+// int tilesY = 9;
+// int numBombs = 10;
+//-----------------------------------------------
+// intermediate
+int tilesX = 16;
+int tilesY = 16;
+int numBombs = 40;
+//-----------------------------------------------
+// expert
+// int tilesX = 30;
+// int tilesY = 16;
+// int numBombs = 99;
+//-----------------------------------------------
+// custom
+// int tilesX = 80;
+// int tilesY = 48;
+// int numBombs = 600;
+//-----------------------------------------------
+
+// game settings
+int tileSize = 40;
 int gameSpeed = 60;
 
 // AI settings
@@ -14,7 +35,15 @@ AI ai;
 boolean enableAI = false;
 boolean enableCursor = false;
 int cursorSpeed = 10;
-boolean debug = true;
+boolean debug = false;
+
+// logging settings
+boolean logResults = true;
+StringList results = new StringList();
+int gameNum = 0;
+int maxGames = 100;
+int wins = 0;
+int losses = 0;
 
 // gamestate
 boolean gameover = false;
@@ -28,10 +57,6 @@ int height = tilesY*tileSize;
 int winWidth = max(300, width+1);
 int winHeight = max(300, height+26);
 
-int[] aiButton = {winWidth/2-50, winHeight-24, 100, 21};
-
-int[] cButton = {winWidth/2+55, winHeight-24, 80, 21};
-
 PFont tileFont;
 PFont titleFont;
 
@@ -39,8 +64,9 @@ int[][] directions = {{-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}, {1,-1}, {0,-
 Tile[][] tiles = new Tile[tilesX][tilesY];
 int bombsLeft = numBombs;
 
-int timeStart;
-int timeEnd;
+// buttons
+int[] aiButton = {winWidth/2-50, winHeight-24, 100, 21};
+int[] cButton = {winWidth/2+55, winHeight-24, 80, 21};
 
 //-----------------------------------------------
 
@@ -55,13 +81,64 @@ void setup() {
 
 	createBoard();
 	ai = new AI();
+	results.append("moves, guesses, result");
 }
 
 //-----------------------------------------------
+// helper functions
 
 void aiMove() {
 	ai.move();
 }
+
+void gameReset() {
+	println("reset");
+	reset = true;
+	gameover = false;
+	won = false;
+	lost = false;
+	createBoard();
+	if (enableAI) thread("aiMove");
+}
+
+//-----------------------------------------------
+
+void logMode() {
+	if (gameNum < maxGames) {
+		if (!enableAI) {
+			enableAI = true;
+			thread("aiMove");
+		}
+		if (gameover) {
+			int aiMoves = (int)ai.gameMoves().x;
+			int aiGuesses = (int)ai.gameMoves().y;
+			if (aiMoves == 1) {
+				gameReset();
+				return;
+			}
+			gameNum++;
+			String moveGuess = String.format("%d, %d, ", aiMoves, aiGuesses);
+			if (won) {
+				results.append(moveGuess + "won");
+				wins++;
+			}
+			else if (lost) {
+				results.append(moveGuess + "lost");
+				losses++;
+			}
+			gameReset();
+		}
+	}
+	else if (gameNum == maxGames) {
+		float winPercent = (float)wins/maxGames;
+		println("winPercent: "+winPercent*100);
+		println("saving results");
+		saveStrings("results.txt", results.array());
+		gameNum++;
+	}
+}
+
+//-----------------------------------------------
 
 void draw() {
 	background(120);
@@ -71,6 +148,10 @@ void draw() {
 		for (int j = 0; j < tilesY; j++) {
 			tiles[i][j].show();
 		}
+	}
+
+	if (logResults) {
+		logMode();
 	}
 
 	if (!gameover && enableAI) {
@@ -132,7 +213,6 @@ void createBoard() {
 		}
 	}
 	bombsLeft = numBombs;
-	timeStart = millis();
 }
 
 //-----------------------------------------------
@@ -240,8 +320,6 @@ void tileFlagged(int i, int j) {
 				}
 			}
 			if (correctFlags == numBombs) {
-				timeEnd = millis();
-				println("time: "+(timeEnd-timeStart));
 				gameover = true;
 				won = true;
 				println("VICTORY");
@@ -263,8 +341,6 @@ void tileClicked(int i, int j) {
 	tile.changed = true;
 	// if tile was a bomb then gameover
 	if (tile.state == "bomb") {
-		timeEnd = millis();
-		println("time: "+(timeEnd-timeStart));
 		gameover = true;
 		lost = true;
 		println("GAMEOVER");
