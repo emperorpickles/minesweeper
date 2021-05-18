@@ -3,32 +3,17 @@ import java.awt.Point;
 import java.util.Vector;
 
 //-----------------------------------------------
-// standard board settings
+// custom board settings
 //-----------------------------------------------
-// beginner
-// int tilesX = 9;
-// int tilesY = 9;
-// int numBombs = 10;
-//-----------------------------------------------
-// intermediate
-int tilesX = 16;
+int tilesX = 30;
 int tilesY = 16;
-int numBombs = 40;
-//-----------------------------------------------
-// expert
-// int tilesX = 30;
-// int tilesY = 16;
-// int numBombs = 99;
-//-----------------------------------------------
-// custom
-// int tilesX = 80;
-// int tilesY = 48;
-// int numBombs = 600;
+int numBombs = 99;
 //-----------------------------------------------
 
 // game settings
 int tileSize = 40;
-int gameSpeed = 60;
+int gameSpeed = 1000;
+String difficulty = "expert";
 
 // AI settings
 AI ai;
@@ -39,11 +24,12 @@ boolean debug = false;
 
 // logging settings
 boolean logResults = true;
-StringList results = new StringList();
+int gameDiff = 0;
 int gameNum = 0;
-int maxGames = 100;
+int maxGames = 10000;
 int wins = 0;
 int losses = 0;
+StringList results = new StringList(maxGames);
 
 // gamestate
 boolean gameover = false;
@@ -57,16 +43,16 @@ int height = tilesY*tileSize;
 int winWidth = max(300, width+1);
 int winHeight = max(300, height+26);
 
+// buttons
+int[] aiButton = {winWidth/2-50, winHeight-24, 100, 21};
+int[] cButton = {winWidth/2+55, winHeight-24, 80, 21};
+
 PFont tileFont;
 PFont titleFont;
 
 int[][] directions = {{-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}, {1,-1}, {0,-1}};
 Tile[][] tiles = new Tile[tilesX][tilesY];
 int bombsLeft = numBombs;
-
-// buttons
-int[] aiButton = {winWidth/2-50, winHeight-24, 100, 21};
-int[] cButton = {winWidth/2+55, winHeight-24, 80, 21};
 
 //-----------------------------------------------
 
@@ -81,7 +67,7 @@ void setup() {
 
 	createBoard();
 	ai = new AI();
-	results.append("moves, guesses, result");
+	results.append("moves, guesses, result, moves, guesses, result, moves, guesses, result");
 }
 
 //-----------------------------------------------
@@ -105,36 +91,48 @@ void gameReset() {
 
 void logMode() {
 	if (gameNum < maxGames) {
-		if (!enableAI) {
-			enableAI = true;
-			thread("aiMove");
-		}
 		if (gameover) {
 			int aiMoves = (int)ai.gameMoves().x;
 			int aiGuesses = (int)ai.gameMoves().y;
 			if (aiMoves == 1) {
 				gameReset();
-				return;
+			} else {
+				gameNum++;
+				println("gameNum: "+gameNum);
+				String moveGuess = String.format("%d, %d, ", aiMoves, aiGuesses);
+				if (won) {
+					if (results.size() > gameNum) {
+						results.set(gameNum, results.get(gameNum) + moveGuess + "won, ");
+					} else results.set(gameNum, moveGuess + "won, ");
+					wins++;
+				}
+				else if (lost) {
+					if (results.size() > gameNum) {
+						results.set(gameNum, results.get(gameNum) + moveGuess + "lost, ");
+					} else results.set(gameNum, moveGuess + "lost, ");
+					losses++;
+				}
+				gameReset();
 			}
-			gameNum++;
-			String moveGuess = String.format("%d, %d, ", aiMoves, aiGuesses);
-			if (won) {
-				results.append(moveGuess + "won");
-				wins++;
-			}
-			else if (lost) {
-				results.append(moveGuess + "lost");
-				losses++;
-			}
-			gameReset();
 		}
+		if (!enableAI) {
+			enableAI = true;
+			thread("aiMove");
+		}
+	} 
+	else if (gameNum == maxGames && gameDiff < 2) {
+		gameNum = 0;
+		gameDiff++;
+		if (gameDiff == 1) difficulty = "intermediate";
+		else if (gameDiff == 2) difficulty = "beginner";
+		gameReset();
 	}
-	else if (gameNum == maxGames) {
-		float winPercent = (float)wins/maxGames;
+	else if (gameDiff == 2 && gameNum == maxGames) {
+		float winPercent = (float)wins/(maxGames*3);
 		println("winPercent: "+winPercent*100);
 		println("saving results");
-		saveStrings("results.txt", results.array());
-		gameNum++;
+		saveStrings("results.csv", results.array());
+		gameDiff++;
 	}
 }
 
@@ -185,6 +183,25 @@ void draw() {
 //-----------------------------------------------
 
 void createBoard() {
+	switch (difficulty) {
+		case "beginner":
+			tilesX = 9;
+			tilesY = 9;
+			numBombs = 10;
+			break;
+		case "intermediate":
+			tilesX = 16;
+			tilesY = 16;
+			numBombs = 40;
+			break;
+		case "expert":
+			tilesX = 30;
+			tilesY = 16;
+			numBombs = 99;
+			break;
+	}
+	width = tilesX*tileSize;
+	height = tilesY*tileSize;
 	// create board
 	for (int i = 0; i < tilesX; i++) {
 		for (int j = 0; j < tilesY; j++) {

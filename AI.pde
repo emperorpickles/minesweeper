@@ -47,7 +47,12 @@ class AI {
 
 		while (enableAI && !gameover) {
 			if (!enableCursor) {
-				smartTarget();
+				if (debug && millis()-lastRecordedTime > interval) {
+					smartTarget();
+					lastRecordedTime = millis();
+				} else {
+					smartTarget();
+				}
 			}
 			else if (enableCursor) {
 				// get list of targets
@@ -131,6 +136,25 @@ class AI {
 				return;
 			}
 		}
+		// then try border tiles
+		Vector<Point> borderTiles = new Vector<Point>();
+		for (int x = 0; x < tilesX; x++) {
+			for (int y = 0; y < tilesY; y++) {
+				Tile tile = tiles[x][y];
+				if (tile.unknown && !tile.changed) {
+					borderTiles.add(new Point(x,y));
+				}
+			}
+		}
+		if (borderTiles.size() > 0) {
+			int i = (int)random(borderTiles.size());
+			int x = borderTiles.get(i).x;
+			int y = borderTiles.get(i).y;
+			targets.add(new PVector(x, y));
+			if (!enableCursor) click(x, y, false);
+			if (debug) println(String.format("xy: (%d,%d)", x+1, y+1));
+			return;
+		}
 		// last resort random choice
 		while (targets.size() == 0) {
 			int x = (int)random(tilesX);
@@ -190,7 +214,6 @@ class AI {
 				int cx = (int)(nearbyHidden.get(i).x);
 				int cy = (int)(nearbyHidden.get(i).y);
 				Tile target = tiles[cx][cy];
-				target.unknown = true;
 
 				// all hidden tiles must be bombs
 				if (nearbyHidden.size() == tile.bombsNearby && target.stateAI == "null") {
@@ -223,6 +246,7 @@ class AI {
 					}
 					return;
 				}
+				target.unknown = true;
 			}
 		}
 	}
