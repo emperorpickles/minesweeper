@@ -2,4 +2,4 @@
 
 Basic Minesweeper game built in Processing 3.
 
-Designed to implement an AI used to solve any board state.
+Uses a basic algorithm to attempt to solve the game.
